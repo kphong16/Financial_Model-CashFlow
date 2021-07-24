@@ -7,10 +7,10 @@ from datetime import timedelta
 from datetime import date
 from functools import wraps
 
-import genfunc
-#from . import genfunc
+# import genfunc
+from . import genfunc
 
-__all__ = ['Index', 'booleanloc']
+__all__ = ['Index', 'PrjtIndex', 'booleanloc']
 
 class Index(object):
     def __init__(self,
@@ -23,7 +23,7 @@ class Index(object):
         self.end = end
         self.periods = periods
         self.freq = freq
-        self._range = pd.date_range(self.start, self.end, self.periods, \
+        self._range = pd.date_range(self.start, self.end, self.periods,
                       self.freq)
         self._idxno = np.arange(len(self._range))
         
@@ -62,7 +62,74 @@ class Index(object):
         isday = _getblnloc(self.day, day)
         
         return isyear & ismonth & isday
+
+
+class PrjtIndex(object):
+    def __init__(self, 
+                 idxname,
+                 start = None, 
+                 end = None,
+                 periods = None, 
+                 freq: str = None,
+                 prjtno = 0
+                 ):
+        self.idxname = idxname
+        self.start = start
+        self.end = end
+        self.periods = periods
+        self.freq = freq
+        self._prjtno = prjtno
         
+        # Initialize
+        self._intlz()
+        
+    def _intlz(self):
+        self._setidxcls()
+        self._prjt = getattr(self, self.idxname[self._prjtno])
+    
+    def _setidxcls(self):
+        for no, name in enumerate(self.idxname):
+            
+            tmpidx = Index(self._isnone(self.start, no), 
+                           self._isnone(self.end, no), 
+                           self._isnone(self.periods, no),
+                           self.freq)
+            setattr(self, name, tmpidx)
+    
+    def _isnone(self, val, no):
+        if val:
+            return val[no]
+        else:
+            return val
+    
+    def __getitem__(self, idxno):
+        return self._prjt[idxno]
+    
+    def __len__(self):
+        return len(self._prjt)
+        
+    @property
+    def index(self):
+        return self._prjt.index        
+    
+    @property
+    def year(self):
+        return self._prjt.year
+        
+    @property
+    def month(self):
+        return self._prjt.month
+        
+    @property
+    def day(self):
+        return self._prjt.day
+        
+    @property
+    def idxno(self):
+        return self._prjt.idxno
+        
+    def idxloc(self, year=None, month=None, day=None):
+        return self._prjt.idxloc(year, month, day)
 
 def _getblnloc(array, val):
     if val == None:

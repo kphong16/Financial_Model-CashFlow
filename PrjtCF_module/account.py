@@ -8,10 +8,10 @@ from datetime import timedelta
 from datetime import date
 from functools import wraps
 
-import genfunc
-from index import Index
-# from . import genfunc
-# from .index import Index
+# import genfunc
+# from index import Index
+from . import genfunc
+from .index import Index, PrjtIndex
 
 __all__ = ['Account', 'Merge']
 
@@ -26,6 +26,9 @@ class Account(object):
         # index 입력
         if isinstance(index, Index):
             self.cindex = index
+            self.index = index.index
+        elif isinstance(index, PrjtIndex):
+            self.cindex = index._prjt
             self.index = index.index
             
         # title 입력

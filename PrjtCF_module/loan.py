@@ -8,12 +8,12 @@ from datetime import timedelta
 from datetime import date
 from functools import wraps
 
-import genfunc
-from index import Index
-from account import Account, Merge
-# from . import genfunc
-# from .index import Index
-# from .account import Account, Merge
+# import genfunc
+# from index import Index
+# from account import Account, Merge
+from . import genfunc
+from .index import Index, PrjtIndex
+from .account import Account, Merge
 
 __all__ = ['Loan']
 
