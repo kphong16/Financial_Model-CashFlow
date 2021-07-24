@@ -10,14 +10,17 @@ from functools import wraps
 
 import genfunc
 from index import Index
+# from . import genfunc
+# from .index import Index
 
+__all__ = ['Account', 'Merge']
 
 class Account(object):
     def __init__(self,
                  index = None, # Index class
                  title = None, # string : "ProductA"
                  tag = None, # string tuple : ("tagA", "tagB")
-                 bal_strt = 0, # int
+                 balstrt = 0, # int
                  note = "" # string
                  ):
         # index 입력
@@ -38,8 +41,8 @@ class Account(object):
         else:
             raise ValueError("tag is not a tuple")
             
-        # bal_strt 입력
-        self.bal_strt = bal_strt
+        # balstrt 입력
+        self.balstrt = balstrt
         
         # note 입력
         self.note = note
@@ -51,6 +54,7 @@ class Account(object):
         # 초기화 함수 실행
         self.setdf()
         self.setjnl()
+        self.set_outputfunc()
     
     #### INITIAL SETTING FUNCTION #### 초기화 함수
     DFCOL = ['add_scdd', 'add_scdd_cum', 'sub_scdd', 'sub_scdd_cum',
@@ -63,7 +67,7 @@ class Account(object):
         self.df = pd.DataFrame(np.zeros([len(self.index), len(self.DFCOL)]),
                                columns = self.DFCOL, 
                                index = self.index)
-        self.df.loc[self.index[0], 'bal_strt'] = self.bal_strt
+        self.df.loc[self.index[0], 'bal_strt'] = self.balstrt
         
         # balance 계산 실행
         self._cal_bal()
@@ -93,6 +97,7 @@ class Account(object):
                 new_args = args
                 func(self, *new_args)
         return wrapped
+                
     #### DECORATOR ####
      
     #### CALCULATE DATA BALANCE ####
@@ -166,10 +171,103 @@ class Account(object):
     #### INPUT DATA ####
 
 
+    #### OUTPUT DATA ####
+    
+    def set_outputfunc(self):
+        """
+        Column명을 기준으로 데이터프레임에서 요구되는 값을 찾아서 반환
+        """
+        self.add_scdd = self.add_scdd(self)
+        self.add_scdd_cum = self.add_scdd_cum(self)
+        self.sub_scdd = self.sub_scdd(self)
+        self.sub_scdd_cum = self.sub_scdd_cum(self)
+        self.bal_strt = self.bal_strt(self)
+        self.amt_add = self.amt_add(self)
+        self.amt_add_cum = self.amt_add_cum(self)
+        self.amt_sub = self.amt_sub(self)
+        self.amt_sub_cum = self.amt_sub_cum(self)
+        self.bal_end = self.bal_end(self)
+        self.add_rsdl_cum = self.add_rsdl_cum(self)
+        self.sub_rsdl_cum = self.sub_rsdl_cum(self)    
+    
+    class getattr_dfcol:
+        """
+        데코레이터
+        클래스명을 column 이름으로 받아서 dataframe에서 index no, column name으로
+        값을 찾아서 반환함.
+        """
+        def __call__(self, cls):
+            def init(self, sprinstnc):
+                self.sprinstnc = sprinstnc
+                self.colname = cls.__name__
+            cls.__init__ = init
+            
+            def getitem(self, idxno):
+                return self.sprinstnc.df.loc[idxno, self.colname]
+            cls.__getitem__ = getitem
+            
+            return cls
+    
+    @getattr_dfcol()
+    class add_scdd:
+        pass
+    @getattr_dfcol()
+    class add_scdd_cum:
+        pass
+    @getattr_dfcol()
+    class sub_scdd:
+        pass
+    @getattr_dfcol()
+    class sub_scdd_cum:
+        pass
+    @getattr_dfcol()
+    class bal_strt:
+        pass
+    @getattr_dfcol()
+    class amt_add:
+        pass
+    @getattr_dfcol()
+    class amt_add_cum:
+        pass
+    @getattr_dfcol()
+    class amt_sub:
+        pass
+    @getattr_dfcol()
+    class amt_sub_cum:
+        pass
+    @getattr_dfcol()
+    class bal_end:
+        pass
+    @getattr_dfcol()
+    class add_rsdl_cum:
+        pass
+    @getattr_dfcol()
+    class sub_rsdl_cum:
+        pass
+    
+    def __getattr__(self, attr):
+        """
+        기존에 정의되어 있지 않은 속성이 입력될 경우, 객체를 조회하여 속성을 반환
+        """ 
+        return self.__dict__[attr]
+    #### OUTPUT DATA ####
+
+
+    #### ACCOUNT TRANSFER ####
+    def send(self, index, amt, account):
+        # 본 account에서 입력된 account로 계좌 이체
+        self.subamt(index, amt)
+        account.addamt(index, amt)
+    #### ACCOUNT TRANSFER ####
+
+
 class Merge(object):
     def __init__(self, dct:dict):
         # dictionary : {"nameA":A, "nameB":B, ...}
         self.dct = dct
+    
+    def __getitem__(self, dct_key):
+        return self.dct[dct_key]
     
     @property
     def df(self):
@@ -196,6 +294,13 @@ class Merge(object):
         tmp_dct = pd.Series({x: self.dct[x].note for x in self.dct})
         return tmp_dct
 
+    def __getattr__(self, attr):
+        """
+        기존에 정의되어 있지 않은 속성이 입력될 경우, Account 객체를 조회하여 속성
+        존재 여부를 확인함.
+        """
+        return [dctval.__dict__[attr] for dctval in self.dct.values()]
+        
 
 class _idxsrch:
     def __init__(self) -> None:
@@ -208,5 +313,4 @@ class _idxsrch:
         instance.__dict__[self._name] = value
         
         
-
     

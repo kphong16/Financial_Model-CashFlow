@@ -11,7 +11,11 @@ from functools import wraps
 import genfunc
 from index import Index
 from account import Account, Merge
+# from . import genfunc
+# from .index import Index
+# from .account import Account, Merge
 
+__all__ = ['Loan']
 
 class Loan(object):
     def __init__(self,
@@ -55,29 +59,30 @@ class Loan(object):
         self.IR = Account(self.cindex, self.title, self.tag)
         
         # Initialize
+        self.dct = {}
         self._intlz()
         
     def _intlz(self):
-        # 초기화 함수 실행
-        dct = {}
-        
+        # 초기화 함수 실행    
         self.ntnl.amt = self.amt_ntnl
         self.ntnl.subscdd(self.cindex.index[0], self.ntnl.amt)
         self.ntnl.addscdd(self.cindex.index[-1], self.ntnl.amt)
-        dct['ntnl'] = self.ntnl
+        self.dct['ntnl'] = self.ntnl
         
         self.fee.rate = self.rate_fee
         self.fee.amt = self.ntnl.amt * self.fee.rate
         self.fee.addscdd(self.cindex.index[0], self.fee.amt)
-        dct['fee'] = self.fee
+        self.dct['fee'] = self.fee
         
         self.IR.rate = self.rate_IR
         self.IR.amt = self.ntnl.amt * self.IR.rate
-        self.IR.addscdd(self.cindex.index, np.ones(len(self.cindex)) * self.IR.amt)
-        dct['IR'] = self.IR
+        self.IR.addscdd(self.cindex.index[1:], np.ones(len(self.cindex)) * self.IR.amt)
+        self.dct['IR'] = self.IR
         
-        self.loan = Merge(dct)
-        
+    @property
+    def df(self):
+        tmp_dct = Merge(self.dct)
+        return tmp_dct.df
     #####################################################
     # fee 입금 함수, IR 입금 함수, ntnl 출금, 입금 함수 추가 필요 #
         

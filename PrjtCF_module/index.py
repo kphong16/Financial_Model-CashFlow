@@ -8,7 +8,9 @@ from datetime import date
 from functools import wraps
 
 import genfunc
+#from . import genfunc
 
+__all__ = ['Index', 'booleanloc']
 
 class Index(object):
     def __init__(self,
@@ -21,7 +23,8 @@ class Index(object):
         self.end = end
         self.periods = periods
         self.freq = freq
-        self._range = pd.date_range(self.start, self.end, self.periods, self.freq)
+        self._range = pd.date_range(self.start, self.end, self.periods, \
+                      self.freq)
         self._idxno = np.arange(len(self._range))
         
     def __getitem__(self, no):
