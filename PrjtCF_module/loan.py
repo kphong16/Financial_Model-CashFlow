@@ -61,6 +61,7 @@ class Loan(object):
         # Initialize
         self.dct = {}
         self._intlz()
+        self.dctmrg = Merge(self.dct)
         
     def _intlz(self):
         # 초기화 함수 실행    
@@ -80,9 +81,12 @@ class Loan(object):
         self.dct['IR'] = self.IR
         
     @property
+    def _df(self):
+        return self.dctmrg._df
+        
+    @property
     def df(self):
-        tmp_dct = Merge(self.dct)
-        return tmp_dct.df
+        return self.dctmrg.df
     #####################################################
     # fee 입금 함수, IR 입금 함수, ntnl 출금, 입금 함수 추가 필요 #
         

@@ -64,13 +64,15 @@ class Account(object):
              'bal_strt', 'amt_add', 'amt_add_cum', 
              'amt_sub', 'amt_sub_cum', 'bal_end',
              'add_rsdl_cum', 'sub_rsdl_cum']
+    DFCOL_smry = ['add_scdd', 'sub_scdd', 
+                  'bal_strt', 'amt_add', 'amt_sub', 'bal_end']
     JNLCOL = ['amt_add', 'amt_sub', 'note']
     def setdf(self):
         # DataFrame 초기화
-        self.df = pd.DataFrame(np.zeros([len(self.index), len(self.DFCOL)]),
+        self._df = pd.DataFrame(np.zeros([len(self.index), len(self.DFCOL)]),
                                columns = self.DFCOL, 
                                index = self.index)
-        self.df.loc[self.index[0], 'bal_strt'] = self.balstrt
+        self._df.loc[self.index[0], 'bal_strt'] = self.balstrt
         
         # balance 계산 실행
         self._cal_bal()
@@ -106,36 +108,36 @@ class Account(object):
     #### CALCULATE DATA BALANCE ####
     def _cal_bal(self):
         # 누적합 계산
-        self.df.loc[:, 'add_scdd_cum'] = self.df.loc[:, 'add_scdd'].cumsum()
-        self.df.loc[:, 'sub_scdd_cum'] = self.df.loc[:, 'sub_scdd'].cumsum()
-        self.df.loc[:, 'amt_add_cum'] = self.df.loc[:, 'amt_add'].cumsum()
-        self.df.loc[:, 'amt_sub_cum'] = self.df.loc[:, 'amt_sub'].cumsum()
+        self._df.loc[:, 'add_scdd_cum'] = self._df.loc[:, 'add_scdd'].cumsum()
+        self._df.loc[:, 'sub_scdd_cum'] = self._df.loc[:, 'sub_scdd'].cumsum()
+        self._df.loc[:, 'amt_add_cum'] = self._df.loc[:, 'amt_add'].cumsum()
+        self._df.loc[:, 'amt_sub_cum'] = self._df.loc[:, 'amt_sub'].cumsum()
         
         # 계좌 잔액 계산
         for i, idx in enumerate(self.index):
             if i > 0:
-                self.df.loc[idx, 'bal_strt'] = self.df.loc[self.index[i-1], 'bal_end']
-            self.df.loc[idx, 'bal_end'] = self.df.loc[idx, 'bal_strt'] \
-                                          + self.df.loc[idx, 'amt_add'] \
-                                          - self.df.loc[idx, 'amt_sub']
+                self._df.loc[idx, 'bal_strt'] = self._df.loc[self.index[i-1], 'bal_end']
+            self._df.loc[idx, 'bal_end'] = self._df.loc[idx, 'bal_strt'] \
+                                          + self._df.loc[idx, 'amt_add'] \
+                                          - self._df.loc[idx, 'amt_sub']
         
         # 누적 합 차액 계산
-        self.df.loc[:, 'add_rsdl_cum'] = self.df.loc[:, 'add_scdd_cum'] \
-                                         - self.df.loc[:, 'amt_add_cum']
-        self.df.loc[:, 'sub_rsdl_cum'] = self.df.loc[:, 'sub_scdd_cum'] \
-                                         - self.df.loc[:, 'amt_sub_cum']
+        self._df.loc[:, 'add_rsdl_cum'] = self._df.loc[:, 'add_scdd_cum'] \
+                                         - self._df.loc[:, 'amt_add_cum']
+        self._df.loc[:, 'sub_rsdl_cum'] = self._df.loc[:, 'sub_scdd_cum'] \
+                                         - self._df.loc[:, 'amt_sub_cum']
     #### CALCULATE DATA BALANCE ####
         
     
     #### INPUT DATA ####
     @listwrapper
     def addscdd(self, index, amt):
-        self.df.loc[index, 'add_scdd'] += amt
+        self._df.loc[index, 'add_scdd'] += amt
         self._cal_bal()
 
     @listwrapper
     def subscdd(self, index, amt):
-        self.df.loc[index, 'sub_scdd'] += amt
+        self._df.loc[index, 'sub_scdd'] += amt
         self._cal_bal()
         
     @listwrapper
@@ -146,7 +148,7 @@ class Account(object):
         self.jnl = pd.concat([self.jnl, tmpjnl])
         
         # DataFrame에 데이터 입력
-        self.df.loc[index, 'amt_add'] += amt
+        self._df.loc[index, 'amt_add'] += amt
         
         # Balance 계산 실행
         self._cal_bal()
@@ -159,7 +161,7 @@ class Account(object):
         self.jnl = pd.concat([self.jnl, tmpjnl])
         
         # DataFrame에 데이터 입력
-        self.df.loc[index, "amt_sub"] += amt
+        self._df.loc[index, "amt_sub"] += amt
         
         # Balance 계산 실행
         self._cal_bal()
@@ -206,7 +208,7 @@ class Account(object):
             cls.__init__ = init
             
             def getitem(self, idxno):
-                return self.sprinstnc.df.loc[idxno, self.colname]
+                return self.sprinstnc._df.loc[idxno, self.colname]
             cls.__getitem__ = getitem
             
             return cls
@@ -247,6 +249,13 @@ class Account(object):
     @getattr_dfcol()
     class sub_rsdl_cum:
         pass
+        
+    
+    # 일반적인 데이터 출력 함수
+    @property
+    def df(self):
+        return self._df.loc[:, self.DFCOL_smry]
+
     
     def __getattr__(self, attr):
         """
@@ -268,19 +277,40 @@ class Merge(object):
     def __init__(self, dct:dict):
         # dictionary : {"nameA":A, "nameB":B, ...}
         self.dct = dct
+        self.set_idxmain()
     
     def __getitem__(self, dct_key):
         return self.dct[dct_key]
     
     @property
-    def df(self):
+    def _df(self):
         # merge 완료된 dataframe 출력
-        tmp_dct = sum([self.dct[x].df for x in self.dct])
+        tmp_dct = sum([self.adjust_idx(self.dct[x]._df) for x in self.dct])
+        return tmp_dct
+        
+    @property
+    def df(self):
+        # merge 완료된 dataframe을 요약하여 출력
+        tmp_dct = sum([self.adjust_idx(self.dct[x].df) for x in self.dct])
         return tmp_dct
     
-    def df_col(self, col):
+    def dfcol(self, col, col_criteria=False):
         # column명 구분에 따라 dictionary 데이터를 취합
-        tmp_dct = pd.DataFrame({x: self.dct[x].df.loc[:, col] for x in self.dct})
+        if isinstance(col, str):
+            tmp_dct = pd.DataFrame({x: self.dct[x]._df.loc[:, col] 
+                                   for x in self.dct})
+        elif isinstance(col, list):
+            col_lst = col
+            if col_criteria:
+                tmp_dct = pd.DataFrame({(col, x): self.dct[x]._df.loc[:, col] 
+                                       for col in col_lst
+                                       for x in self.dct})
+            else:
+                tmp_dct = pd.DataFrame({(x, col): self.dct[x]._df.loc[:, col] 
+                                       for x in self.dct
+                                       for col in col_lst})
+        tmp_dct.fillna(0, inplace=True)
+        return tmp_dct
     
     def title(self):
         # dictionary 데이터 상 title 값 취합
@@ -303,6 +333,25 @@ class Merge(object):
         존재 여부를 확인함.
         """
         return [dctval.__dict__[attr] for dctval in self.dct.values()]
+    
+    #### 작성 중 ####
+    # 기준 index 설정
+    def set_idxmain(self):
+        idx_len = 0
+        self.idx_main = None
+        for x in self.dct:
+            tmpidx = self.dct[x].df.index
+            if len(tmpidx) > idx_len:
+                idx_len = len(tmpidx)
+                self.idx_main = tmpidx
+    
+    # index 조정
+    def adjust_idx(self, tmpdf):
+        if len(tmpdf.index) < len(self.idx_main):
+            return DataFrame(tmpdf, index=self.idx_main).fillna(0)
+        return tmpdf
+                
+    #### 작성 중 ####        
         
 
 class _idxsrch:
