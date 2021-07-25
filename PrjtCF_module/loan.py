@@ -21,8 +21,9 @@ class Loan(object):
     def __init__(self,
                  index = None, # Index class
                  amt_ntnl = None, # float
-                 rate_fee = None, # float
-                 rate_IR = None, # float
+                 rate_fee = 0.0, # float
+                 rate_IR = 0.0, # float
+                 IRcycle = 1, # int, months
                  title = None, # string : "LoanA"
                  tag = None, # string tuple : ("tagA", "tagB")
                  note = "" # string
@@ -31,11 +32,15 @@ class Loan(object):
         if isinstance(index, Index):
             self.cindex = index
             self.index = index.index
+        elif isinstance(index, PrjtIndex):
+            self.cindex = index._prjt
+            self.index = index.index
             
         # 주요 변수 입력
         self.amt_ntnl = amt_ntnl
         self.rate_fee = rate_fee
-        self.rate_IR = rate_IR
+        self.IRcycle = IRcycle
+        self.rate_IR = rate_IR * self.IRcycle / 12
             
         # title 입력
         self.title = title
