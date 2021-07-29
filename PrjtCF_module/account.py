@@ -203,7 +203,7 @@ class Account(object):
         """
         def __call__(self, cls):
             def init(self, sprinstnc):
-                self.sprinstnc = sprinstnc
+                self.sprinstnc = sprinstnc # super instance <- 상위 클래스의 인스턴스를 의미
                 self.colname = cls.__name__
             cls.__init__ = init
             
@@ -278,6 +278,7 @@ class Merge(object):
         # dictionary : {"nameA":A, "nameB":B, ...}
         self.dct = dct
         self.set_idxmain()
+        self.set_outputfunc()
     
     def __getitem__(self, dct_key):
         return self.dct[dct_key]
@@ -311,6 +312,85 @@ class Merge(object):
                                        for col in col_lst})
         tmp_dct.fillna(0, inplace=True)
         return tmp_dct
+    
+    ##################################
+    #### OUTPUT DATA ####
+    
+    def set_outputfunc(self):
+        """
+        Column명을 기준으로 데이터프레임에서 요구되는 값을 찾아서 반환
+        """
+        self.add_scdd = self.add_scdd(self)
+        self.add_scdd_cum = self.add_scdd_cum(self)
+        self.sub_scdd = self.sub_scdd(self)
+        self.sub_scdd_cum = self.sub_scdd_cum(self)
+        self.bal_strt = self.bal_strt(self)
+        self.amt_add = self.amt_add(self)
+        self.amt_add_cum = self.amt_add_cum(self)
+        self.amt_sub = self.amt_sub(self)
+        self.amt_sub_cum = self.amt_sub_cum(self)
+        self.bal_end = self.bal_end(self)
+        self.add_rsdl_cum = self.add_rsdl_cum(self)
+        self.sub_rsdl_cum = self.sub_rsdl_cum(self)    
+    
+    class getattr_dfcol:
+        """
+        데코레이터
+        클래스명을 column 이름으로 받아서 dataframe에서 index no, column name으로
+        값을 찾아서 반환함.
+        """
+        def __call__(self, cls):
+            def init(self, sprinstnc):
+                self.sprinstnc = sprinstnc # super instance <- 상위 클래스의 인스턴스를 의미
+                self.colname = cls.__name__
+            cls.__init__ = init
+            
+            def getitem(self, idxno):
+                return self.sprinstnc._df.loc[idxno, self.colname]
+            cls.__getitem__ = getitem
+            
+            return cls
+    
+    @getattr_dfcol()
+    class add_scdd:
+        pass
+    @getattr_dfcol()
+    class add_scdd_cum:
+        pass
+    @getattr_dfcol()
+    class sub_scdd:
+        pass
+    @getattr_dfcol()
+    class sub_scdd_cum:
+        pass
+    @getattr_dfcol()
+    class bal_strt:
+        pass
+    @getattr_dfcol()
+    class amt_add:
+        pass
+    @getattr_dfcol()
+    class amt_add_cum:
+        pass
+    @getattr_dfcol()
+    class amt_sub:
+        pass
+    @getattr_dfcol()
+    class amt_sub_cum:
+        pass
+    @getattr_dfcol()
+    class bal_end:
+        pass
+    @getattr_dfcol()
+    class add_rsdl_cum:
+        pass
+    @getattr_dfcol()
+    class sub_rsdl_cum:
+        pass
+        
+    #### OUTPUT DATA ####
+    ##################################
+    
     
     def title(self):
         # dictionary 데이터 상 title 값 취합
@@ -350,7 +430,6 @@ class Merge(object):
         if len(tmpdf.index) < len(self.idx_main):
             return DataFrame(tmpdf, index=self.idx_main).fillna(0)
         return tmpdf
-                
     #### 작성 중 ####        
         
 
