@@ -19,7 +19,8 @@ __all__ = ['Loan']
 
 class Loan(object):
     def __init__(self,
-                 index = None, # Index class
+                 index = None, # basic index class
+                 idxfn = None, # financial index class
                  amt_ntnl = None, # float
                  rate_fee = 0.0, # float
                  rate_IR = 0.0, # float
@@ -35,6 +36,14 @@ class Loan(object):
         elif isinstance(index, PrjtIndex):
             self.cindex = index._prjt
             self.index = index.index
+        
+        # idxfn 입력
+        if isinstance(idxfn, Index):
+            self.cidxfn = idxfn
+            self.idxfn = idxfn.index
+        elif isinstance(index, PrjtIndex):
+            self.cidxfn = idxfn._prjt
+            self.idxfn = idxfn.index
             
         # 주요 변수 입력
         self.amt_ntnl = amt_ntnl
@@ -71,18 +80,18 @@ class Loan(object):
     def _intlz(self):
         # 초기화 함수 실행    
         self.ntnl.amt = self.amt_ntnl
-        self.ntnl.subscdd(self.cindex.index[0], self.ntnl.amt)
-        self.ntnl.addscdd(self.cindex.index[-1], self.ntnl.amt)
+        self.ntnl.subscdd(self.cidxfn.index[0], self.ntnl.amt)
+        self.ntnl.addscdd(self.cidxfn.index[-1], self.ntnl.amt)
         self.dct['ntnl'] = self.ntnl
         
         self.fee.rate = self.rate_fee
         self.fee.amt = self.ntnl.amt * self.fee.rate
-        self.fee.addscdd(self.cindex.index[0], self.fee.amt)
+        self.fee.addscdd(self.cidxfn.index[0], self.fee.amt)
         self.dct['fee'] = self.fee
         
         self.IR.rate = self.rate_IR
         self.IR.amt = self.ntnl.amt * self.IR.rate
-        self.IR.addscdd(self.cindex.index[1:], np.ones(len(self.cindex)) * self.IR.amt)
+        self.IR.addscdd(self.cidxfn.index[1:], np.ones(len(self.cidxfn)) * self.IR.amt)
         self.dct['IR'] = self.IR
         
     @property
